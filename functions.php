@@ -1902,6 +1902,18 @@ function alean_styles() {
 add_action('wp_enqueue_scripts', 'alean_styles', 20); 
 
 
+add_action('wp_enqueue_scripts', 'alean_enqueue_variation_price_sync');
+function alean_enqueue_variation_price_sync() {
+    if (!is_product()) {
+        return;
+    }
+    wp_enqueue_script('jquery');
+    $css = '.single-product .single_variation .woocommerce-variation-price{display:none!important;}';
+    wp_add_inline_style('woocommerce-general', $css);
+    $js = "jQuery(function($){\n  var $form = $('form.variations_form');\n  function updateTarget(variation){\n    var $target = $('.woocommerce-variation-add-to-cart .alean-add-to-cart-price');\n    if(!$target.length){ return; }\n    if(variation && variation.price_html){\n      $target.html(variation.price_html);\n    }else{\n      var $priceNode = $('.single_variation .woocommerce-variation-price .price');\n      if($priceNode.length){\n        $target.html($priceNode.html());\n      }else{\n        $target.empty();\n      }\n    }\n  }\n  if($form.length){\n    $form.on('found_variation', function(e, variation){ updateTarget(variation); });\n    $form.on('reset_data', function(){ $('.woocommerce-variation-add-to-cart .alean-add-to-cart-price').empty(); });\n  }\n  updateTarget();\n});";
+    wp_add_inline_script('jquery', $js, 'after');
+}
+
 
 
 
