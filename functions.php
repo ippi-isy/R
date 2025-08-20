@@ -2090,10 +2090,14 @@ function ajax_cart_notifications_script() {
                     });
                 }
 
+                // Сообщаем Woo о добавлении и принудительно обновляем фрагменты
+                $(document.body).trigger('added_to_cart', [response.fragments || {}, response.cart_hash || '', $thisbutton]);
+                $(document.body).trigger('wc_fragment_refresh');
+
                 $thisbutton.addClass('added').removeClass('loading');
 
-                // Trigger event
-                $(document.body).trigger('added_to_cart', [response.fragments, response.cart_hash, $thisbutton]);
+                // Trigger event дублируем для совместимости с темами/плагинами
+                $(document.body).trigger('added_to_cart', [response.fragments || {}, response.cart_hash || '', $thisbutton]);
                 
             }).fail(function() {
                 showCartNotification('Ошибка при добавлении товара в корзину', 'error');
@@ -2140,6 +2144,10 @@ function ajax_cart_notifications_script() {
                             $(key).replaceWith(value);
                         });
                     }
+
+                    // Сообщаем Woo о добавлении и принудительно обновляем фрагменты
+                    $(document.body).trigger('added_to_cart', [response.fragments || {}, response.cart_hash || '', $submitButton]);
+                    $(document.body).trigger('wc_fragment_refresh');
 
                     $submitButton.removeClass('loading').prop('disabled', false);
                     
