@@ -2044,6 +2044,20 @@ function ajax_cart_notifications_script() {
             $('head').append('<style id="cart-notification-styles">@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}</style>');
         }
 
+        // Показываем уведомления при стандартном событии WooCommerce (каталог и др.)
+        $(document.body).on('added_to_cart', function(event, fragments, cart_hash, $button) {
+            try {
+                var productName = '';
+                if ($button && $button.length) {
+                    productName = $button.closest('.product').find('.woocommerce-loop-product__title').text();
+                }
+                if (!productName) {
+                    productName = $('.product_title').text() || 'Товар';
+                }
+                showCartNotification('✓ ' + productName + ' добавлен в корзину!', 'success');
+            } catch (e) {}
+        });
+
         // Используем нативный AJAX WooCommerce для кнопок каталога без кастомного перехвата
 
         // Обработчик для страницы товара
@@ -2056,11 +2070,13 @@ function ajax_cart_notifications_script() {
                 e.preventDefault();
                 
                 var formData = $form.serialize();
-                formData += '&action=woocommerce_ajax_add_to_cart';
+                var ajaxUrl = (typeof wc_add_to_cart_params !== 'undefined' && wc_add_to_cart_params.wc_ajax_url)
+                    ? wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'add_to_cart')
+                    : (window.ajaxurl || '/wp-admin/admin-ajax.php?action=woocommerce_ajax_add_to_cart');
                 
                 $submitButton.addClass('loading').prop('disabled', true);
                 
-                $.post(wc_add_to_cart_params.ajax_url, formData, function(response) {
+                $.post(ajaxUrl, formData, function(response) {
                     if (!response) {
                         $submitButton.removeClass('loading').prop('disabled', false);
                         showCartNotification('Ошибка при добавлении товара в корзину', 'error');
@@ -2084,16 +2100,15 @@ function ajax_cart_notifications_script() {
                     var productName = $('.product_title').text() || 'Товар';
                     showCartNotification('✓ ' + productName + ' добавлен в корзину!', 'success');
 
-                    // Обновляем фрагменты корзины
+                    // Обновляем фрагменты корзины, если пришли
                     if (response.fragments) {
                         $.each(response.fragments, function(key, value) {
                             $(key).replaceWith(value);
                         });
                     }
 
-                    // Сообщаем Woo о добавлении и принудительно обновляем фрагменты
+                    // Сообщаем Woo о добавлении (некоторые темы слушают это)
                     $(document.body).trigger('added_to_cart', [response.fragments || {}, response.cart_hash || '', $submitButton]);
-                    $(document.body).trigger('wc_fragment_refresh');
 
                     $submitButton.removeClass('loading').prop('disabled', false);
 
