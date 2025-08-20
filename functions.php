@@ -2035,11 +2035,15 @@ function ajax_cart_notifications_script() {
                 e.preventDefault();
                 
                 var formData = $form.serialize();
-                // Гарантируем наличие product_id для простых товаров
-                if (formData.indexOf('product_id=') === -1) {
-                    var pid = $form.find('input[name="product_id"]').val() || $form.find('input[name="add-to-cart"]').val();
-                    if (pid) {
+                var submitPid = ($submitButton.attr('name') === 'add-to-cart') ? $submitButton.val() : '';
+                var pid = submitPid || $form.find('input[name="product_id"]').val() || $form.find('input[name="add-to-cart"]').val();
+                // Гарантируем наличие product_id и add-to-cart для простых товаров
+                if (pid) {
+                    if (formData.indexOf('product_id=') === -1) {
                         formData += (formData ? '&' : '') + 'product_id=' + encodeURIComponent(pid);
+                    }
+                    if (formData.indexOf('add-to-cart=') === -1) {
+                        formData += (formData ? '&' : '') + 'add-to-cart=' + encodeURIComponent(pid);
                     }
                 }
                 var ajaxUrl = (typeof wc_add_to_cart_params !== 'undefined' && wc_add_to_cart_params.wc_ajax_url)
