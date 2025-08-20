@@ -2048,9 +2048,20 @@ function ajax_cart_notifications_script() {
 
             e.preventDefault();
 
-            var id = $thisbutton.val();
+            // Извлекаем product_id надёжно: data-атрибуты или href
+            var href = $thisbutton.attr('href') || '';
+            var product_id = $thisbutton.data('product_id') || $thisbutton.attr('data-product_id') || 0;
+            if (!product_id && href) {
+                var match = href.match(/[?&]add-to-cart=(\d+)/);
+                if (match && match[1]) {
+                    product_id = parseInt(match[1], 10);
+                }
+            }
+            if (!product_id) {
+                var idVal = $thisbutton.val();
+                if (idVal) product_id = parseInt(idVal, 10);
+            }
             var product_qty = 1;
-            var product_id = id;
             var variation_id = 0;
 
             var data = {
@@ -2075,7 +2086,9 @@ function ajax_cart_notifications_script() {
                 this_page = this_page.replace('add-to-cart', 'added-to-cart');
 
                 if (response.error && response.product_url) {
-                    showCartNotification('Не удалось добавить товар. Уточните параметры на странице товара.', 'error');
+                    // Для простых товаров из каталога не должно быть ошибок выбора вариантов —
+                    // если сервер вернул ошибку, отправим пользователя на страницу товара
+                    window.location = response.product_url;
                     return;
                 }
 
@@ -2150,6 +2163,9 @@ function ajax_cart_notifications_script() {
                     $(document.body).trigger('wc_fragment_refresh');
 
                     $submitButton.removeClass('loading').prop('disabled', false);
+
+                    // На странице товара не показываем ссылку "Просмотр корзины"
+                    $('.added_to_cart.wc-forward').remove();
                     
                 }).fail(function() {
                     showCartNotification('Ошибка при добавлении товара в корзину', 'error');
