@@ -2035,6 +2035,13 @@ function ajax_cart_notifications_script() {
                 e.preventDefault();
                 
                 var formData = $form.serialize();
+                // Гарантируем наличие product_id для простых товаров
+                if (formData.indexOf('product_id=') === -1) {
+                    var pid = $form.find('input[name="product_id"]').val() || $form.find('input[name="add-to-cart"]').val();
+                    if (pid) {
+                        formData += (formData ? '&' : '') + 'product_id=' + encodeURIComponent(pid);
+                    }
+                }
                 var ajaxUrl = (typeof wc_add_to_cart_params !== 'undefined' && wc_add_to_cart_params.wc_ajax_url)
                     ? wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'add_to_cart')
                     : (window.ajaxurl || '/wp-admin/admin-ajax.php?action=woocommerce_ajax_add_to_cart');
@@ -2050,15 +2057,23 @@ function ajax_cart_notifications_script() {
 
                     if (response.error && response.product_url) {
                         $submitButton.removeClass('loading').prop('disabled', false);
-                        // Показываем уточняющее сообщение только если вариация не выбрана
+                        // Если это простой товар (без вариаций), обрабатываем как успех (случай уже в корзине и т.п.)
                         var isVariable = $('form.variations_form').length > 0;
+                        if (!isVariable) {
+                            $(document.body).trigger('wc_fragment_refresh');
+                            var productName = $('.product_title').text() || 'Товар';
+                            showCartNotification('✓ ' + productName + ' добавлен в корзину!', 'success');
+                            $('.added_to_cart.wc-forward').remove();
+                            return;
+                        }
+                        // Для вариативных — подскажем про параметры, если не выбрано
                         var hasVariation = $('input.variation_id').val();
-                        if (isVariable && !hasVariation) {
+                        if (!hasVariation) {
                             showCartNotification('Заполните параметры товара', 'error');
                         } else {
                             showCartNotification('Ошибка при добавлении товара', 'error');
                         }
-                        return; 
+                        return;
                     }
 
                     // Показываем уведомление
