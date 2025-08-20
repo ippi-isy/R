@@ -2066,6 +2066,8 @@ function ajax_cart_notifications_script() {
                     productName = $('.product_title').text() || 'Товар';
                 }
                 showCartNotification('✓ ' + productName + ' добавлен в корзину!', 'success');
+                // Убираем стандартную ссылку "Просмотр корзины"
+                $('.added_to_cart.wc-forward').remove();
             } catch (e) {}
         });
 
@@ -2118,8 +2120,9 @@ function ajax_cart_notifications_script() {
                         });
                     }
 
-                    // Сообщаем Woo о добавлении (некоторые темы слушают это)
+                    // Сообщаем Woo о добавлении (некоторые темы слушают это), и очищаем стандартную ссылку
                     $(document.body).trigger('added_to_cart', [response.fragments || {}, response.cart_hash || '', $submitButton]);
+                    $('.added_to_cart.wc-forward').remove();
 
                     $submitButton.removeClass('loading').prop('disabled', false);
 
