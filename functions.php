@@ -2000,7 +2000,7 @@ function woocommerce_ajax_add_to_cart() {
             'error'       => true,
             'product_url' => $product_id ? apply_filters('woocommerce_cart_redirect_after_error', get_permalink($product_id), $product_id) : home_url('/'),
         );
-        echo wp_send_json($data);
+        wp_send_json($data);
     }
     wp_die();
 }
@@ -2075,7 +2075,7 @@ function ajax_cart_notifications_script() {
                 this_page = this_page.replace('add-to-cart', 'added-to-cart');
 
                 if (response.error && response.product_url) {
-                    window.location = response.product_url;
+                    showCartNotification('Не удалось добавить товар. Уточните параметры на странице товара.', 'error');
                     return;
                 }
 
@@ -2119,12 +2119,15 @@ function ajax_cart_notifications_script() {
                 
                 $.post(wc_add_to_cart_params.ajax_url, formData, function(response) {
                     if (!response) {
+                        $submitButton.removeClass('loading').prop('disabled', false);
+                        showCartNotification('Ошибка при добавлении товара в корзину', 'error');
                         return;
                     }
 
                     if (response.error && response.product_url) {
-                        window.location = response.product_url;
-                        return;
+                        $submitButton.removeClass('loading').prop('disabled', false);
+                        showCartNotification('Заполните параметры товара', 'error');
+                        return; 
                     }
 
                     // Показываем уведомление
