@@ -1987,7 +1987,7 @@ function woocommerce_ajax_add_to_cart() {
     $passed_validation = apply_filters('woocommerce_add_to_cart_validation', true, $product_id, $quantity);
     $product_status    = $product_id ? get_post_status($product_id) : false;
 
-    if ($product_id && $passed_validation && WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation) && 'publish' === $product_status) {
+    if ($product_id && $passed_validation && 'publish' === $product_status && WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation)) {
         do_action('woocommerce_ajax_added_to_cart', $product_id);
 
         if ('yes' === get_option('woocommerce_cart_redirect_after_add')) {
@@ -1996,11 +1996,19 @@ function woocommerce_ajax_add_to_cart() {
 
         WC_AJAX::get_refreshed_fragments();
     } else {
-        $data = array(
-            'error'       => true,
-            'product_url' => $product_id ? apply_filters('woocommerce_cart_redirect_after_error', get_permalink($product_id), $product_id) : home_url('/'),
-        );
-        wp_send_json($data);
+        // Если товар продаётся по одному и он уже в корзине, считаем это успехом и просто обновим фрагменты
+        $product_obj = $product_id ? wc_get_product($product_id) : null;
+        $cart_item_key = WC()->cart->generate_cart_id($product_id, $variation_id, $variation, array());
+        if ($product_obj && $product_obj->is_sold_individually() && WC()->cart->find_product_in_cart($cart_item_key)) {
+            do_action('woocommerce_ajax_added_to_cart', $product_id);
+            WC_AJAX::get_refreshed_fragments();
+        } else {
+            $data = array(
+                'error'       => true,
+                'product_url' => $product_id ? apply_filters('woocommerce_cart_redirect_after_error', get_permalink($product_id), $product_id) : home_url('/'),
+            );
+            wp_send_json($data);
+        }
     }
     wp_die();
 }
@@ -2061,7 +2069,14 @@ function ajax_cart_notifications_script() {
 
                     if (response.error && response.product_url) {
                         $submitButton.removeClass('loading').prop('disabled', false);
-                        showCartNotification('Заполните параметры товара', 'error');
+                        // Показываем уточняющее сообщение только если вариация не выбрана
+                        var isVariable = $('form.variations_form').length > 0;
+                        var hasVariation = $('input.variation_id').val();
+                        if (isVariable && !hasVariation) {
+                            showCartNotification('Заполните параметры товара', 'error');
+                        } else {
+                            showCartNotification('Ошибка при добавлении товара', 'error');
+                        }
                         return; 
                     }
 
