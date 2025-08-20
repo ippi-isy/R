@@ -1956,8 +1956,10 @@ add_filter('woocommerce_cart_redirect_after_error', '__return_false');
 // Включаем AJAX для добавления в корзину на всех страницах
 add_filter('woocommerce_loop_add_to_cart_link', 'add_ajax_to_cart_class', 10, 2);
 function add_ajax_to_cart_class($link, $product) {
-    // Добавляем класс ajax_add_to_cart для всех товаров
-    $link = str_replace('add_to_cart_button', 'add_to_cart_button ajax_add_to_cart', $link);
+    // AJAX только для простых покупаемых и в наличии
+    if ($product && $product->is_type('simple') && $product->is_purchasable() && $product->is_in_stock()) {
+        $link = str_replace('add_to_cart_button', 'add_to_cart_button ajax_add_to_cart', $link);
+    }
     return $link;
 }
 
@@ -2044,8 +2046,12 @@ function ajax_cart_notifications_script() {
             $('head').append('<style id="cart-notification-styles">@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}</style>');
         }
 
-        // Показываем уведомления при стандартном событии WooCommerce (каталог и др.)
+        // Показываем уведомления при стандартном событии WooCommerce (каталог и др.), с анти-дублем
+        let lastNotifyAt = 0;
         $(document.body).on('added_to_cart', function(event, fragments, cart_hash, $button) {
+            var now = Date.now();
+            if (now - lastNotifyAt < 200) return; // защита от двойного вызова
+            lastNotifyAt = now;
             try {
                 var productName = '';
                 if ($button && $button.length) {
