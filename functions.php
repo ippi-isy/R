@@ -1963,57 +1963,9 @@ function add_ajax_to_cart_class($link, $product) {
     return $link;
 }
 
-// Обработчик AJAX добавления в корзину
-add_action('wp_ajax_woocommerce_ajax_add_to_cart', 'woocommerce_ajax_add_to_cart');
-add_action('wp_ajax_nopriv_woocommerce_ajax_add_to_cart', 'woocommerce_ajax_add_to_cart');
-
-function woocommerce_ajax_add_to_cart() {
-    // Support both catalog buttons (product_id) and single product forms (add-to-cart)
-    $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
-    if (!$product_id && isset($_POST['add-to-cart'])) {
-        $product_id = absint($_POST['add-to-cart']);
-    }
-    $product_id = apply_filters('woocommerce_add_to_cart_product_id', $product_id);
-
-    $quantity     = empty($_POST['quantity']) ? 1 : wc_stock_amount($_POST['quantity']);
-    $variation_id = isset($_POST['variation_id']) ? absint($_POST['variation_id']) : 0;
-
-    // Collect chosen variation attributes if present
-    $variation = array();
-    foreach ($_POST as $key => $value) {
-        if (strpos($key, 'attribute_') === 0 && $value !== '') {
-            $variation[$key] = wc_clean(wp_unslash($value));
-        }
-    }
-
-    $passed_validation = apply_filters('woocommerce_add_to_cart_validation', true, $product_id, $quantity);
-    $product_status    = $product_id ? get_post_status($product_id) : false;
-
-    if ($product_id && $passed_validation && 'publish' === $product_status && WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation)) {
-        do_action('woocommerce_ajax_added_to_cart', $product_id);
-
-        if ('yes' === get_option('woocommerce_cart_redirect_after_add')) {
-            wc_add_to_cart_message(array($product_id => $quantity), true);
-        }
-
-        WC_AJAX::get_refreshed_fragments();
-    } else {
-        // Если товар продаётся по одному и он уже в корзине, считаем это успехом и просто обновим фрагменты
-        $product_obj = $product_id ? wc_get_product($product_id) : null;
-        $cart_item_key = WC()->cart->generate_cart_id($product_id, $variation_id, $variation, array());
-        if ($product_obj && $product_obj->is_sold_individually() && WC()->cart->find_product_in_cart($cart_item_key)) {
-            do_action('woocommerce_ajax_added_to_cart', $product_id);
-            WC_AJAX::get_refreshed_fragments();
-        } else {
-            $data = array(
-                'error'       => true,
-                'product_url' => $product_id ? apply_filters('woocommerce_cart_redirect_after_error', get_permalink($product_id), $product_id) : home_url('/'),
-            );
-            wp_send_json($data);
-        }
-    }
-    wp_die();
-}
+// Удаляем кастомный admin-ajax обработчик и используем нативный wc-ajax
+remove_action('wp_ajax_woocommerce_ajax_add_to_cart', 'woocommerce_ajax_add_to_cart');
+remove_action('wp_ajax_nopriv_woocommerce_ajax_add_to_cart', 'woocommerce_ajax_add_to_cart');
 
 // Добавляем JavaScript для AJAX уведомлений
 add_action('wp_footer', 'ajax_cart_notifications_script');
